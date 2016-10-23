@@ -1,3 +1,3 @@
 class BoardEvaluator {
-  Map[Board, Float] scoreCache =
+//  Map[Board, Float] scoreCache =
 }

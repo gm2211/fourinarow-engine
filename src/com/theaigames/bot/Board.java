@@ -1,27 +1,6 @@
-// Copyright 2015 theaigames.com (developers@theaigames.com)
+package com.theaigames.bot;
 
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-
-//        http://www.apache.org/licenses/LICENSE-2.0
-
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-//    For the full copyright and license information, please view the LICENSE
-//    file that was distributed with this source code.
-
-/**
- * Board class
- *
- * Board class that contains the field status data and various helper functions.
- *
- * @author Jim van Eeden <jim@starapple.nl>, Joost de Meij <joost@starapple.nl>
- */
+import java.util.Optional;
 
 public class Board {
     private int[][] mBoard;
@@ -30,11 +9,10 @@ public class Board {
     private int mLastColumn = 0;
     private int discCount = 0;
 
-
-    public Board(int columns, int rows) {
-        mBoard = new int[columns][rows];
-        mCols = columns;
-        mRows = rows;
+    private Board(Builder builder) {
+        mBoard = new int[builder.getColumns()][builder.getRows()];
+        mCols = builder.getColumns();
+        mRows = builder.getRows();
         clearBoard();
     }
 
@@ -162,5 +140,42 @@ public class Board {
      */
     public int getNrRows() {
         return mRows;
+    }
+
+    public static class Builder {
+        private Optional<Integer> rows;
+        private Optional<Integer> columns;
+
+        public void setColumns(int columns) {
+            this.columns = Optional.of(columns);
+        }
+
+        public void setRows(int rows) {
+            this.rows = Optional.of(rows);
+        }
+
+        private int getRows() {
+            return rows.get();
+        }
+
+        private int getColumns() {
+            return columns.get();
+        }
+
+        public Board build() {
+            if (!canBuild()) {
+                throw new IllegalStateException("Cannot build incomplete object");
+            }
+
+            return new Board(this);
+        }
+
+        private boolean canBuild() {
+            return rows.isPresent() && columns.isPresent();
+        }
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 }
