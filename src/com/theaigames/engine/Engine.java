@@ -18,7 +18,8 @@
 
 package com.theaigames.engine;
 
-import com.theaigames.engine.io.IOPlayer;
+import com.theaigames.engine.io.IOBot;
+
 import java.io.IOException;
 import java.util.ArrayList;
 /**
@@ -35,7 +36,7 @@ public class Engine {
 
     private boolean isRunning; // Boolean representing current engine running state
     private Logic logic; // Class implementing Logic interface; handles all data
-    private ArrayList<IOPlayer> players; // ArrayList containing player handlers
+    private ArrayList<IOBot> players; // ArrayList containing player handlers
 
     // Engine constructor
     public Engine() {
@@ -53,12 +54,12 @@ public class Engine {
         Process process = Runtime.getRuntime().exec(command);
 
         // Attach IO to process
-        IOPlayer player = new IOPlayer(process, idString);
+        IOBot player = new IOBot(process, idString);
 
         addPlayer(player);
     }
 
-    public void addPlayer(IOPlayer player) {
+    public void addPlayer(IOBot player) {
         // Add player
         this.players.add(player);
 
@@ -85,7 +86,7 @@ public class Engine {
     /**
      * @return : A list of all the players in this game
      */
-    public ArrayList<IOPlayer> getPlayers() {
+    public ArrayList<IOBot> getPlayers() {
         return this.players;
     }
 

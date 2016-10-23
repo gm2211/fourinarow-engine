@@ -19,7 +19,7 @@ package com.theaigames.game;
 
 import com.theaigames.engine.Engine;
 import com.theaigames.engine.Logic;
-import com.theaigames.engine.io.IOPlayer;
+import com.theaigames.engine.io.IOBot;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -92,8 +92,9 @@ public abstract class AbstractGame implements Logic {
         }
 
         // check if the starting arguments are passed correctly
-        if (botIds.isEmpty() || botDirs.isEmpty() || botIds.size() != botDirs.size())
+        if (botIds.isEmpty() || botDirs.isEmpty() || botIds.size() != botDirs.size()) {
             throw new RuntimeException("Missing some arguments.");
+        }
 
         // add the players
         for (int i=0; i < botIds.size(); i++) {
@@ -112,11 +113,8 @@ public abstract class AbstractGame implements Logic {
     @Override
     public boolean isGameOver()
     {
-        if (this.processor.isGameOver()
-                || (this.maxRounds >= 0 && this.processor.getRoundNumber() > this.maxRounds) ) {
-            return true;
-        }
-        return false;
+        return this.processor.isGameOver()
+                || (this.maxRounds >= 0 && this.processor.getRoundNumber() > this.maxRounds);
     }
 
     /**
@@ -126,8 +124,8 @@ public abstract class AbstractGame implements Logic {
     @Override
     public void playRound(int roundNumber)
     {
-        for (IOPlayer ioPlayer : this.engine.getPlayers())
-            ioPlayer.addToDump(String.format("Round %d", roundNumber));
+        for (IOBot ioBot : this.engine.getPlayers())
+            ioBot.addToDump(String.format("Round %d", roundNumber));
 
         this.processor.playRound(roundNumber);
     }
@@ -139,8 +137,8 @@ public abstract class AbstractGame implements Logic {
     public void finish() throws Exception
     {
         // stop the bots
-        for (IOPlayer ioPlayer : this.engine.getPlayers())
-            ioPlayer.finish();
+        for (IOBot ioBot : this.engine.getPlayers())
+            ioBot.finish();
         Thread.sleep(100);
 
         if(DEV_MODE) { // print the game file when in DEV_MODE

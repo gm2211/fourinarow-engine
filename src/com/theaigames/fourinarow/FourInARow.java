@@ -18,59 +18,58 @@
 
 package com.theaigames.fourinarow;
 
-import com.theaigames.engine.io.IOPlayer;
 import com.theaigames.fourinarow.field.Field;
-import com.theaigames.fourinarow.player.Player;
 import com.theaigames.game.AbstractGame;
-import com.theaigames.game.player.AbstractPlayer;
+import com.theaigames.game.player.BotPlayer;
+import com.theaigames.game.player.CliBot;
+import com.theaigames.game.player.Player;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class FourInARow extends AbstractGame {
 
-    private final int TIMEBANK_MAX = 10000;
-    private final int TIME_PER_MOVE = 500;
-    private final int FIELD_COLUMNS = 7;
-    private final int FIELD_ROWS = 6;
+    private static final long TIMEBANK_MAX = 10000L;
+    private static final long TIME_PER_MOVE = 500L;
+    private static final int FIELD_COLUMNS = 7;
+    private static final int FIELD_ROWS = 6;
+
+    public static final String FIELD_ROWS_SETTING_NAME = "field_rows";
+    public static final String FIELD_COLUMNS_SETTING_NAME = "field_columns";
+    public static final String YOUR_BOTID = "your_botid";
     private List<Player> players;
     private Field mField;
     private int mBotId = 1;
 
     @Override
-    public void setupGame(ArrayList<IOPlayer> ioPlayers) throws Exception {
+    public void setupGame(Collection<? extends CliBot> cliBots) throws Exception {
         // create all the players and everything they need
-        this.players = new ArrayList<Player>();
+        this.players = new ArrayList<>();
 
         // create the playing field
         this.mField = new Field(FIELD_COLUMNS, FIELD_ROWS);
 
-        for (int i=0; i<ioPlayers.size(); i++) {
-            // create the player
-            String playerName = String.format("player%d", i+1);
-            Player player = new Player(playerName, ioPlayers.get(i), TIMEBANK_MAX, TIME_PER_MOVE, i+1);
-            this.players.add(player);
-
-        }
-
-        for (AbstractPlayer player : this.players) {
-            sendSettings(player);
-
-        }
+        AtomicInteger currentId = new AtomicInteger(1);
+        cliBots.stream()
+                .map(bot -> new BotPlayer(currentId.getAndIncrement(), bot, TIMEBANK_MAX, TIME_PER_MOVE))
+                .peek(this::sendSettings)
+                .forEach(players::add);
 
         // create the processor
-        super.processor = new Processor(this.players, this.mField);
+        processor = new Processor(this.players, this.mField);
     }
 
     @Override
-    public void sendSettings(AbstractPlayer player) {
+    public void sendSettings(Player player) {
         player.sendSetting("timebank", TIMEBANK_MAX);
         player.sendSetting("time_per_move", TIME_PER_MOVE);
         player.sendSetting("player_names", this.players.get(0).getName() + "," + this.players.get(1).getName());
         player.sendSetting("your_bot", player.getName());
-        player.sendSetting("your_botid",mBotId);
-        player.sendSetting("field_columns", FIELD_COLUMNS);
-        player.sendSetting("field_rows", FIELD_ROWS);
+        player.sendSetting(YOUR_BOTID, mBotId);
+        player.sendSetting(FIELD_COLUMNS_SETTING_NAME, FIELD_COLUMNS_SETTING_NAME);
+        player.sendSetting(FIELD_ROWS_SETTING_NAME, FIELD_ROWS_SETTING_NAME);
         mBotId++;
     }
 

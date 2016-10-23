@@ -11,7 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-//  
+//
 //    For the full copyright and license information, please view the LICENSE
 //    file that was distributed with this source code.
 
@@ -19,22 +19,22 @@
 package com.theaigames.fourinarow.moves;
 
 import com.theaigames.fourinarow.field.Field;
-import com.theaigames.game.player.AbstractPlayer;
+import com.theaigames.game.player.Player;
 
 public class MoveResult extends Move {
     private String mBoard;
     private int mPlayerId;
 
-    public MoveResult(AbstractPlayer player, Field field, int playerId) {
+    public MoveResult(Player player, Field field, int playerId) {
         super(player);
         mBoard = field.toString();
         mPlayerId = playerId;
     }
-    
+
     public String toString() {
         return mBoard;
     }
-    
+
 
     public int getPlayerId() {
         return mPlayerId;

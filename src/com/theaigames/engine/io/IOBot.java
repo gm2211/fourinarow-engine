@@ -17,17 +17,19 @@
 
 package com.theaigames.engine.io;
 
+import com.theaigames.game.player.CliBot;
+
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 
 /**
- * IOPlayer class
+ * IOBot class
  *
  * Handles the communication between the bot process and the engine
  *
  * @author Jackie Xu <jackie@starapple.nl>, Jim van Eeden <jim@starapple.nl>
  */
-public class IOPlayer implements Runnable {
+public class IOBot implements Runnable, CliBot {
 
     private Process process;
     private OutputStreamWriter inputStream;
@@ -43,7 +45,7 @@ public class IOPlayer implements Runnable {
 
     public String response;
 
-    public IOPlayer(Process process, String idString) {
+    public IOBot(Process process, String idString) {
         this.inputStream = new OutputStreamWriter(process.getOutputStream());
         this.outputGobbler = new InputStreamGobbler(process.getInputStream(), this, "output");
         this.errorGobbler = new InputStreamGobbler(process.getErrorStream(), this, "error");
@@ -56,18 +58,18 @@ public class IOPlayer implements Runnable {
 
     /**
      * Write a string to the bot
-     * @param line : input string
-     * @throws IOException
+     * @param message : input string
      */
-    public void writeToBot(String line) throws IOException {
+    @Override
+    public void writeToBot(String message) {
         if (!this.finished) {
             try {
-                this.inputStream.write(line + "\n");
+                this.inputStream.write(message + "\n");
                 this.inputStream.flush();
             } catch(IOException e) {
-                System.err.println("Writing to bot failed");
+                throw new RuntimeException("Writing to bot failed", e);
             }
-            addToDump(line);
+            addToDump(message);
         }
     }
 
@@ -76,6 +78,7 @@ public class IOPlayer implements Runnable {
      * @param timeOut : time before timeout
      * @return : bot's response, returns and empty string when there is no response
      */
+    @Override
     public String getResponse(long timeOut) {
         long timeStart = System.currentTimeMillis();
         String enginesays = "Output from your bot: ";
