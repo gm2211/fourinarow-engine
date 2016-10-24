@@ -11,14 +11,14 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-//  
+//
 //    For the full copyright and license information, please view the LICENSE
 //    file that was distributed with this source code.
 
 package com.theaigames.fourinarow.field;
 
 public class Field {
-    
+
     private int[][] mBoard;
     private int mCols = 0, mRows = 0;
     public String mLastError = "";
@@ -33,7 +33,7 @@ public class Field {
         mRows = rows;
         clearBoard();
     }
-    
+
     public void clearBoard() {
         for (int x = 0; x < mCols; x++) {
             for (int y = 0; y < mRows; y++) {
@@ -41,7 +41,7 @@ public class Field {
             }
         }
     }
-    
+
     public void dumpBoard() {
         for (int x = 0; x < mCols; x++) {
             System.out.print("--");
@@ -57,11 +57,11 @@ public class Field {
             System.out.print("\n");
         }
     }
-    
+
     public static String padRight(String s, int n) {
-         return String.format("%1$-" + n + "s", s);  
+         return String.format("%1$-" + n + "s", s);
     }
-    
+
     /**
      * Adds a disc to the board
      * @param args : command line arguments passed on running of application
@@ -83,30 +83,30 @@ public class Field {
         }
         return false;
     }
-    
+
     /**
      * Returns reason why addDisc returns false
-     * @param args : 
+     * @param args :
      * @return : reason why addDisc returns false
      */
     public String getLastError() {
         return mLastError;
     }
-    
+
     /**
      * Returns last inserted column
-     * @param args : 
+     * @param args :
      * @return : last inserted column
      */
     public int getLastColumn() {
         return mLastColumn;
     }
-    
-    
+
+
     @Override
     /**
      * Creates comma separated String with player names for every cell.
-     * @param args : 
+     * @param args :
      * @return : String with player names for every cell, or 'empty' when cell is empty.
      */
     public String toString() {
@@ -127,10 +127,10 @@ public class Field {
         }
         return r;
     }
-    
+
     /**
      * Checks whether the field is full
-     * @param args : 
+     * @param args :
      * @return : Returns true when field is full, otherwise returns false.
      */
     public boolean isFull() {
@@ -141,10 +141,10 @@ public class Field {
         // All cells are filled
         return true;
     }
-    
+
     /**
      * Checks if there is a winner, if so, returns player id.
-     * @param args : 
+     * @param args :
      * @return : Returns player id if there is a winner, otherwise returns 0.
      */
     public int getWinner() {
@@ -171,7 +171,7 @@ public class Field {
                 }
             }
         }
-        
+
         /* Check for vertical wins */
         for (int x = 0; x < mCols; x++) {
             for (int y = 0; y < mRows; y++) {
@@ -195,7 +195,7 @@ public class Field {
                 }
             }
         }
-        
+
         /* Check for diagonal wins */
         for (int x = 0; x < mCols; x++) {
             for (int y = 0; y < mRows; y++) {
@@ -244,20 +244,20 @@ public class Field {
         }
         return 0;
     }
-    
-    
+
+
     /**
      * Returns the direction of a win.
-     * @param args : 
+     * @param args :
      * @return : Returns String with direction of win, or 'None' if there is no win yet.
      */
     public String getWinType() {
         return mWinType;
     }
-    
+
     /**
      * Returns the direction of a win.
-     * @param args : 
+     * @param args :
      * @return : Returns String with direction of win, or 'None' if there is no win yet.
      */
     public Disc getWinDisc() {
@@ -267,8 +267,12 @@ public class Field {
     public int getNrColumns() {
         return mCols;
     }
-    
+
     public int getNrRows() {
         return mRows;
+    }
+
+    public String prettyString() {
+        return String.format("%n%s%n", toString().replaceAll(";", "\n"));
     }
 }

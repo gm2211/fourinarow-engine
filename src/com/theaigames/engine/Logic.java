@@ -17,7 +17,6 @@
 
 package com.theaigames.engine;
 
-import com.theaigames.game.player.CliBot;
 import com.theaigames.game.player.Player;
 
 import java.util.Collection;
@@ -32,7 +31,7 @@ import java.util.Collection;
  * @author Jackie Xu <jackie@starapple.nl>, Jim van Eeden <jim@starapple.nl>
  */
 public interface Logic {
-    public void setupGame(Collection<? extends CliBot> players) throws Exception; // create the players, set up the game
+    public void setupGame(Collection<? extends Player> players) throws Exception; // create the players, set up the game
     public void playRound(int roundNumber); // play a round
     public void sendSettings(Player player); // send the game settings to given player
     public boolean isGameOver(); // check if the game is over

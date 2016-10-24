@@ -2,12 +2,13 @@ package com.theaigames.bot;
 
 import com.theaigames.fourinarow.FourInARow;
 import com.theaigames.fourinarow.Processor;
+import com.theaigames.game.player.CliBot;
 
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.function.Supplier;
 
-public class MyBotCli {
+public class MyBotCli implements CliBot {
 
     private static Optional<MyBot> bot = Optional.empty();
     private static final Board.Builder boardBuilder = Board.builder();
@@ -20,17 +21,17 @@ public class MyBotCli {
         return _board.get();
     };
 
+    private final StringBuilder dump = new StringBuilder();
+
     public static void main(String... args) {
         try(Scanner scan = new Scanner(System.in)) {
 
             while (scan.hasNextLine()) {
                 String line = scan.nextLine();
 
-                if (line.isEmpty()) {
-                    continue;
+                if (!line.isEmpty()) {
+                    processCommand(line);
                 }
-
-                processCommand(line);
             }
         }
     }
@@ -81,12 +82,47 @@ public class MyBotCli {
         bot = Optional.of(new MyBot(Integer.parseInt(botId)));
     }
 
-    public static void updateBoard(String boardData) {
+    private static void updateBoard(String boardData) {
         board.get().parseFromString(boardData);
     }
 
-    public static Optional<String> move() {
+    private static Optional<String> move() {
         int column = bot.map(theBot -> theBot.selectColumn(board.get())).orElse(1);
         return Optional.of("place_disc " + column);
+    }
+
+    @Override
+    public String getResponse(long timeout) {
+        return move().orElseThrow(() -> new IllegalStateException("Cannot move"));
+    }
+
+    @Override
+    public void writeToBot(String message) {
+        processCommand(message);
+    }
+
+    @Override
+    public void finish() {
+
+    }
+
+    @Override
+    public int getId() {
+        return bot.map(MyBot::botId).orElse(0);
+    }
+
+    @Override
+    public void addToDump(String dumpy) {
+        dump.append(dumpy).append(System.lineSeparator());
+    }
+
+    @Override
+    public String getDump() {
+        return dump.toString();
+    }
+
+    @Override
+    public void run() {
+
     }
 }

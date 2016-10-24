@@ -113,7 +113,7 @@ public class BotPlayer implements Player {
      * @param value : value of the update
      */
     @Override
-    public void sendUpdate(String type, BotPlayer player, String value) {
+    public void sendUpdate(String type, Player player, String value) {
         sendLine(String.format("update %s %s %s", player.getName(), type, value));
     }
 
@@ -124,7 +124,7 @@ public class BotPlayer implements Player {
      * @param value : value of the update
      */
     @Override
-    public void sendUpdate(String type, BotPlayer player, int value) {
+    public void sendUpdate(String type, Player player, int value) {
         sendLine(String.format("update %s %s %d", player.getName(), type, value));
     }
 
@@ -168,6 +168,21 @@ public class BotPlayer implements Player {
         updateTimeBank(timeElapsed);
 
         return response;
+    }
+
+    @Override
+    public void run() {
+        bot.run();
+    }
+
+    @Override
+    public void finish() {
+        bot.finish();
+    }
+
+    @Override
+    public void addToDump(String format) {
+        bot.addToDump(format);
     }
 
     /**

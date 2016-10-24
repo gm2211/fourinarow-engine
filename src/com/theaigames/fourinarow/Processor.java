@@ -24,30 +24,37 @@ import com.theaigames.game.GameHandler;
 import com.theaigames.game.player.Player;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 public class Processor implements GameHandler {
+
+    private static final Logger log = Logger.getLogger(Processor.class.getName());
 
     public static final String FIELD = "field";
     private static final String FIRST_TRY = " (first try)";
     private static final String SECOND_TRY = " (second try)";
+    public static final String LAST_TRY = " (last try)";
+    public static final String MOVE = "move";
 
     private int mRoundNumber = 1;
     private final List<Player> mPlayers;
     private final List<Move> mMoves;
     private final List<MoveResult> mMoveResults;
-    private final Field mField;
+    private final Field board;
     private int mGameOverByPlayerErrorPlayerId = 0;
 
     public Processor(List<Player> players, Field field) {
         mPlayers = new ArrayList<>(players);
-        mField = field;
+        board = field;
         mMoves = new ArrayList<>();
         mMoveResults = new ArrayList<>();
 
         /* Create first move with empty field */
         Move move = new Move(mPlayers.get(0));
-        MoveResult moveResult = new MoveResult(mPlayers.get(0), mField, mPlayers.get(0).getId());
+        MoveResult moveResult = new MoveResult(mPlayers.get(0), board, mPlayers.get(0).getId());
         mMoves.add(move);
         mMoveResults.add(moveResult);
     }
@@ -56,85 +63,84 @@ public class Processor implements GameHandler {
     @Override
     public void playRound(int roundNumber) {
         for (Player player : mPlayers) {
-            player.sendUpdate("round",  mRoundNumber);
-            player.sendUpdate(FIELD, mField.toString());
+            player.sendUpdate("round", mRoundNumber);
+            player.sendUpdate(FIELD, board.toString());
             if (getWinner() == null) {
-                String response = player.requestMove("move");
-                Move move = new Move(player);
-                MoveResult moveResult;
 
-                if (parseResponse(response, player)) {
-                    move.setColumn(mField.getLastColumn());
-                    move.setIllegalMove(mField.getLastError());
-                    mMoves.add(move);
-                    moveResult = new MoveResult(player, mField, player.getId());
-                    moveResult.setColumn(mField.getLastColumn());
-                    moveResult.setIllegalMove(mField.getLastError());
-                    mMoveResults.add(moveResult);
-                } else {
-                    move = new Move(player); moveResult = new MoveResult(player, mField, player.getId());
-                    move.setColumn(mField.getLastColumn());
-                    move.setIllegalMove(mField.getLastError() + FIRST_TRY);
-                    mMoves.add(move);
-                    moveResult.setColumn(mField.getLastColumn());
-                    moveResult.setIllegalMove(mField.getLastError() + FIRST_TRY);
-                    mMoveResults.add(moveResult);
-                    player.sendUpdate(FIELD, mField.toString());
-                    response = player.requestMove("move");
-                    if (parseResponse(response, player)) {
-                        move = new Move(player); moveResult = new MoveResult(player, mField, player.getId());
-                        move.setColumn(mField.getLastColumn());
-                        mMoves.add(move);
-                        moveResult.setColumn(mField.getLastColumn());
-                        mMoveResults.add(moveResult);
-                    } else {
-                        move = new Move(player); moveResult = new MoveResult(player, mField, player.getId());
-                        move.setColumn(mField.getLastColumn());
-                        move.setIllegalMove(mField.getLastError() + SECOND_TRY);
-                        mMoves.add(move);
-                        moveResult.setColumn(mField.getLastColumn());
-                        moveResult.setIllegalMove(mField.getLastError() + SECOND_TRY);
-                        mMoveResults.add(moveResult);
-                        player.sendUpdate(FIELD, mField.toString());
-                        response = player.requestMove("move");
-                        if (parseResponse(response, player)) {
-                            move = new Move(player); moveResult = new MoveResult(player, mField, player.getId());
-                            move.setColumn(mField.getLastColumn());
-                            mMoves.add(move);
-                            moveResult.setColumn(mField.getLastColumn());
-                            mMoveResults.add(moveResult);
-                        } else { /* Too many errors, other player wins */
-                            move = new Move(player); moveResult = new MoveResult(player, mField, player.getId());
-                            move.setColumn(mField.getLastColumn());
-                            move.setIllegalMove(mField.getLastError() + " (last try)");
-                            mMoves.add(move);
-                            moveResult.setColumn(mField.getLastColumn());
-                            moveResult.setIllegalMove(mField.getLastError() + " (last try)");
-                            mMoveResults.add(moveResult);
-                            mGameOverByPlayerErrorPlayerId = player.getId();
-                        }
+
+                List<String> retryMessages = Arrays.asList("", FIRST_TRY, SECOND_TRY, LAST_TRY);
+                AtomicInteger attemptCount = new AtomicInteger(0);
+
+                boolean unsuccessful;
+
+                do {
+                    final String response = player.requestMove(MOVE);
+                    log.info(() -> String.format("Player %s played: %s", player.getName(), response));
+
+                    unsuccessful = !parseResponse(response, player);
+
+                    if (unsuccessful) {
+                        log.info(() -> String.format("Invalid move: %s", board.getLastError()));
+
+                        if (attemptCount.get() == 0) { attemptCount.getAndIncrement(); }
                     }
-                }
 
-                player.sendUpdate(FIELD, mField.toString());
+                    // Select FIRST_TRY instead of empty string if not successful on first attempt
+
+                    persistMoves(player, retryMessages.get(attemptCount.getAndIncrement()));
+                    player.sendUpdate(FIELD, board.toString());
+                } while (unsuccessful && (attemptCount.get() < retryMessages.size()));
+
+                if (unsuccessful) { mGameOverByPlayerErrorPlayerId = player.getId(); }
+
                 mRoundNumber++;
             }
         }
     }
 
+    private void persistMoves(Player player, String attemptCountMessage) {
+        if (!attemptCountMessage.isEmpty()) {
+            log.info(() -> String.format("Attempt #: %s", attemptCountMessage));
+        }
+
+        Move move = new Move(player);
+
+        move.setColumn(board.getLastColumn());
+        move.setIllegalMove(board.getLastError() + attemptCountMessage);
+        mMoves.add(move);
+        MoveResult moveResult = new MoveResult(player, board, player.getId());
+        moveResult.setColumn(board.getLastColumn());
+        moveResult.setIllegalMove(board.getLastError() + attemptCountMessage);
+        mMoveResults.add(moveResult);
+
+        log.info(() -> String.format("Board now looks like: %s", board.prettyString()));
+    }
+
+    private void move(Player player) {
+        Move move;
+        MoveResult moveResult;
+        move = new Move(player);
+        moveResult = new MoveResult(player, board, player.getId());
+        move.setColumn(board.getLastColumn());
+        mMoves.add(move);
+        moveResult.setColumn(board.getLastColumn());
+        mMoveResults.add(moveResult);
+    }
+
     /**
      * Parses player response and inserts disc in field
+     *
      * @return : true if valid move, otherwise false
      */
     private Boolean parseResponse(String r, Player player) {
         String[] parts = r.split(" ");
         if ((parts.length >= 2) && parts[0].equals("place_disc")) {
             int column = Integer.parseInt(parts[1]);
-            if (mField.addDisc(column, player.getId())) {
+            if (board.addDisc(column, player.getId())) {
                 return true;
             }
         }
-        mField.mLastError = "Unknown command";
+        board.mLastError = "Unknown command";
         return false;
     }
 
@@ -145,7 +151,7 @@ public class Processor implements GameHandler {
 
     @Override
     public Player getWinner() {
-        int winner = mField.getWinner();
+        int winner = board.getWinner();
         if (mGameOverByPlayerErrorPlayerId > 0) { /* Game over due to too many player errors. Look up the other player, which became the winner */
             for (Player player : mPlayers) {
                 if (player.getId() != mGameOverByPlayerErrorPlayerId) {
@@ -170,6 +176,7 @@ public class Processor implements GameHandler {
 
     /**
      * Returns a List of Moves played in this game
+     *
      * @return : List with Move objects
      */
     public List<Move> getMoves() {
@@ -177,11 +184,11 @@ public class Processor implements GameHandler {
     }
 
     public Field getField() {
-        return mField;
+        return board;
     }
 
     @Override
     public boolean isGameOver() {
-        return (getWinner() != null || mField.isFull());
+        return (getWinner() != null || board.isFull());
     }
 }

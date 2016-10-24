@@ -29,7 +29,7 @@ import java.io.OutputStreamWriter;
  *
  * @author Jackie Xu <jackie@starapple.nl>, Jim van Eeden <jim@starapple.nl>
  */
-public class IOBot implements Runnable, CliBot {
+public class IOBot implements CliBot {
 
     private Process process;
     private OutputStreamWriter inputStream;
@@ -89,11 +89,11 @@ public class IOBot implements Runnable, CliBot {
             return "";
         }
 
-        while(this.response == null) {
+        while (this.response == null) {
             long timeNow = System.currentTimeMillis();
             long timeElapsed = timeNow - timeStart;
 
-            if(timeElapsed >= timeOut) {
+            if (timeElapsed >= timeOut) {
                 addToDump(String.format("Response timed out (%dms), let your bot return '%s' instead of nothing or make it faster.", timeOut, this.NULL_MOVE));
                 this.errorCounter++;
                 if (this.errorCounter > this.MAX_ERRORS) {
@@ -105,7 +105,7 @@ public class IOBot implements Runnable, CliBot {
 
             try { Thread.sleep(2); } catch (InterruptedException e) {}
         }
-        if(this.response.equalsIgnoreCase("no_moves")) {
+        if (this.response.equalsIgnoreCase("no_moves")) {
             this.response = null;
             addToDump(String.format("%s\"%s\"", enginesays, this.NULL_MOVE));
             return "";
@@ -122,7 +122,7 @@ public class IOBot implements Runnable, CliBot {
      * Ends the bot process and it's communication
      */
     public void finish() {
-        if(this.finished)
+        if (this.finished)
             return;
 
         // stop the bot's IO
@@ -135,6 +135,11 @@ public class IOBot implements Runnable, CliBot {
         try { this.process.waitFor(); } catch (InterruptedException ex) {}
 
         this.finished = true;
+    }
+
+    @Override
+    public int getId() {
+        return Integer.parseInt(idString);
     }
 
     /**
@@ -155,6 +160,7 @@ public class IOBot implements Runnable, CliBot {
      * Adds a string to the bot dump
      * @param dumpy : string to add to the dump
      */
+    @Override
     public void addToDump(String dumpy){
         dump.append(dumpy + "\n");
     }
@@ -184,6 +190,7 @@ public class IOBot implements Runnable, CliBot {
     /**
      * @return : the dump of all the IO
      */
+    @Override
     public String getDump() {
         return dump.toString();
     }

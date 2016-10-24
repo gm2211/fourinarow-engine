@@ -20,10 +20,17 @@ package com.theaigames.game;
 import com.theaigames.engine.Engine;
 import com.theaigames.engine.Logic;
 import com.theaigames.engine.io.IOBot;
+import com.theaigames.game.player.BotPlayer;
+import com.theaigames.game.player.CliBot;
+import com.theaigames.game.player.Player;
+import one.util.streamex.StreamEx;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * abstract class AbstractGame
@@ -38,7 +45,7 @@ import java.util.List;
 
 public abstract class AbstractGame implements Logic {
 
-    public Engine engine;
+    public Engine engine = new Engine();
     public GameHandler processor;
 
     public int maxRounds;
@@ -51,54 +58,88 @@ public abstract class AbstractGame implements Logic {
         maxRounds = -1; // set this later if there is a maximum amount of rounds for this game
     }
 
+    protected abstract long getTimeBankMax();
+    protected abstract long getTimePerMove();
+
     /**
      * Partially sets up the engine
      * @param args : command line arguments passed on running of application
-     * @throws IOException
-     * @throws RuntimeException
      */
-    public void setupEngine(String args[]) throws IOException, RuntimeException {
+    public void setupEngine(String[] args) throws IOException {
+        if (DEV_MODE) {
+            initDevMode();
+            return;
+        }
+
+        List<CliBot> bots = parseBots(args);
+
+        setupEngine(bots);
+    }
+
+    public void setupEngine(List<CliBot> bots) {
+        // create engine
+        this.engine = new Engine();
+
+        // add the players
+        bots.forEach(bot -> this.engine.addPlayer(createPlayer(bot)));
+    }
+
+    public void setupEngine(Collection<? extends Player> players) {
+        // create engine
+        this.engine = new Engine();
+
+        // add the players
+        players.forEach(engine::addPlayer);
+    }
+
+    private List<CliBot> parseBots(String[] args) {
+        ArgsParser argsParser = ArgsParser.parse(args);
+
+        List<String> botIds = argsParser.getBotIds();
+        List<String> botDirs = argsParser.getBotDirs();
+
+        // check if the starting arguments are passed correctly
+        if (botIds.isEmpty() || botDirs.isEmpty() || (botIds.size() != botDirs.size())) {
+            throw new RuntimeException("Missing some arguments.");
+        }
+
+
+        return StreamEx.zip(botDirs, botIds, this::createBot).collect(Collectors.toList());
+    }
+
+    private CliBot createBot(String command, String id) {
+        try {
+            Process process = Runtime.getRuntime().exec(command);
+            return new IOBot(process, id);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private BotPlayer createPlayer(CliBot bot) {
+        return new BotPlayer(bot.getId(), bot, getTimeBankMax(), getTimePerMove());
+    }
+
+    private BotPlayer createPlayer(String botCommand, int id) {
+        return createPlayer(createBot(botCommand, "ID_" + id));
+    }
+
+    private void initDevMode() throws IOException {
 
         // create engine
         this.engine = new Engine();
 
-        // add the test bots if in DEV_MODE
-        if(DEV_MODE) {
-            if(TEST_BOT.isEmpty()) {
-                throw new RuntimeException("DEV_MODE: Please provide a command to start the test bot by setting 'TEST_BOT' in your main class.");
-            }
-            if(NUM_TEST_BOTS <= 0) {
-                throw new RuntimeException("DEV_MODE: Please provide the number of bots in this game by setting 'NUM_TEST_BOTS' in your main class.");
-            }
-
-            for (int i = 0; i < NUM_TEST_BOTS; i++) {
-                this.engine.addPlayer(TEST_BOT, "ID_" + i);
-            }
-
-            return;
+        if (TEST_BOT.isEmpty()) {
+            throw new RuntimeException("DEV_MODE: Please provide a command to start the test bot " +
+                    "by setting 'TEST_BOT' in your main class.");
+        }
+        if (NUM_TEST_BOTS <= 0) {
+            throw new RuntimeException("DEV_MODE: Please provide the number of bots in this game " +
+                    "by setting 'NUM_TEST_BOTS' in your main class.");
         }
 
-        // add the bots from the arguments if not in DEV_MODE
-        List<String> botDirs = new ArrayList<>();
-        List<String> botIds = new ArrayList<>();
-
-        if (args.length <= 0) {
-            throw new RuntimeException("No arguments provided.");
-        }
-
-        for (int i=0; i < args.length; i++) {
-            botIds.add(i + "");
-            botDirs.add(args[i]);
-        }
-
-        // check if the starting arguments are passed correctly
-        if (botIds.isEmpty() || botDirs.isEmpty() || botIds.size() != botDirs.size()) {
-            throw new RuntimeException("Missing some arguments.");
-        }
-
-        // add the players
-        for (int i=0; i < botIds.size(); i++) {
-            this.engine.addPlayer(botDirs.get(i), botIds.get(i));
+        for (int i = 0; i < NUM_TEST_BOTS; i++) {
+            this.engine.addPlayer(createPlayer(TEST_BOT, i));
         }
     }
 
@@ -124,8 +165,8 @@ public abstract class AbstractGame implements Logic {
     @Override
     public void playRound(int roundNumber)
     {
-        for (IOBot ioBot : this.engine.getPlayers())
-            ioBot.addToDump(String.format("Round %d", roundNumber));
+        for (Player player : this.engine.getPlayers())
+            player.addToDump(String.format("Round %d", roundNumber));
 
         this.processor.playRound(roundNumber);
     }
@@ -134,14 +175,15 @@ public abstract class AbstractGame implements Logic {
      * close the bot processes, save, exit program
      */
     @Override
-    public void finish() throws Exception
-    {
+    public void finish() throws InterruptedException {
         // stop the bots
-        for (IOBot ioBot : this.engine.getPlayers())
-            ioBot.finish();
-        Thread.sleep(100);
+        for (Player player : this.engine.getPlayers()) {
+            player.finish();
+        }
 
-        if(DEV_MODE) { // print the game file when in DEV_MODE
+        Thread.sleep(100L);
+
+        if (DEV_MODE) { // print the game file when in DEV_MODE
             String playedGame = this.processor.getPlayedGame();
             System.out.println(playedGame);
         } else { // save the game to database
@@ -165,5 +207,55 @@ public abstract class AbstractGame implements Logic {
         // save results to file here
         String playedGame = this.processor.getPlayedGame();
         System.out.println(playedGame);
+    }
+
+    private static final class ArgsParser {
+        private final List<String> botDirs;
+        private final List<String> botIds;
+
+        private ArgsParser(List<String> botDirs, List<String> botIds) {
+            this.botDirs = new ArrayList<>(botDirs);
+            this.botIds = new ArrayList<>(botIds);
+        }
+
+
+        List<String> getBotDirs() {
+            return botDirs;
+        }
+
+        List<String> getBotIds() {
+            return botIds;
+        }
+
+        static ArgsParser parse(String... args) {
+            List<String> ids = new ArrayList<>();
+            List<String> dirs = new ArrayList<>();
+
+            if (args.length <= 0) {
+                throw new RuntimeException("No arguments provided.");
+            }
+
+            for (int i=0; i < args.length; i++) {
+                ids.add(i + "");
+                dirs.add(args[i]);
+            }
+
+            return new ArgsParser(dirs, ids);
+        }
+    }
+
+    @FunctionalInterface
+    private interface FunctionWithException<F, T> extends Function<F, T> {
+
+        @Override
+        default T apply(F from) {
+            try {
+                return applyWithException(from);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        T applyWithException(F from) throws Exception;
     }
 }

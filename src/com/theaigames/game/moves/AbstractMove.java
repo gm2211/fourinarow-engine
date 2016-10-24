@@ -66,7 +66,7 @@ public abstract class AbstractMove {
      * @return : True if this Move is illegal
      */
     public boolean isIllegal() {
-        if(this.illegalMove.isEmpty())
+        if (this.illegalMove.isEmpty())
             return false;
         return true;
     }

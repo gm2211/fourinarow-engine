@@ -18,16 +18,16 @@
 
 package com.theaigames.fourinarow;
 
+import com.theaigames.bot.MyBotCli;
 import com.theaigames.fourinarow.field.Field;
 import com.theaigames.game.AbstractGame;
 import com.theaigames.game.player.BotPlayer;
-import com.theaigames.game.player.CliBot;
 import com.theaigames.game.player.Player;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class FourInARow extends AbstractGame {
 
@@ -40,25 +40,20 @@ public class FourInARow extends AbstractGame {
     public static final String FIELD_COLUMNS_SETTING_NAME = "field_columns";
     public static final String YOUR_BOTID = "your_botid";
     private List<Player> players;
-    private Field mField;
-    private int mBotId = 1;
 
     @Override
-    public void setupGame(Collection<? extends CliBot> cliBots) throws Exception {
+    public void setupGame(Collection<? extends Player> players) throws Exception {
         // create all the players and everything they need
         this.players = new ArrayList<>();
 
         // create the playing field
-        this.mField = new Field(FIELD_COLUMNS, FIELD_ROWS);
+        Field mField = new Field(FIELD_COLUMNS, FIELD_ROWS);
 
-        AtomicInteger currentId = new AtomicInteger(1);
-        cliBots.stream()
-                .map(bot -> new BotPlayer(currentId.getAndIncrement(), bot, TIMEBANK_MAX, TIME_PER_MOVE))
-                .peek(this::sendSettings)
-                .forEach(players::add);
+        this.players = new ArrayList<>(players);
+        this.players.forEach(this::sendSettings);
 
         // create the processor
-        processor = new Processor(this.players, this.mField);
+        processor = new Processor(this.players, mField);
     }
 
     @Override
@@ -67,16 +62,25 @@ public class FourInARow extends AbstractGame {
         player.sendSetting("time_per_move", TIME_PER_MOVE);
         player.sendSetting("player_names", this.players.get(0).getName() + "," + this.players.get(1).getName());
         player.sendSetting("your_bot", player.getName());
-        player.sendSetting(YOUR_BOTID, mBotId);
-        player.sendSetting(FIELD_COLUMNS_SETTING_NAME, FIELD_COLUMNS_SETTING_NAME);
-        player.sendSetting(FIELD_ROWS_SETTING_NAME, FIELD_ROWS_SETTING_NAME);
-        mBotId++;
+        player.sendSetting(YOUR_BOTID, player.getId()); /* this is fundamentally screwed up, but whatever */
+        player.sendSetting(FIELD_COLUMNS_SETTING_NAME, FIELD_COLUMNS);
+        player.sendSetting(FIELD_ROWS_SETTING_NAME, FIELD_ROWS);
+    }
+
+    @Override
+    protected long getTimeBankMax() {
+        return TIMEBANK_MAX;
+    }
+
+    @Override
+    protected long getTimePerMove() {
+        return TIME_PER_MOVE;
     }
 
     @Override
     protected void runEngine() throws Exception {
-        super.engine.setLogic(this);
-        super.engine.start();
+        engine.setLogic(this);
+        engine.start();
     }
 
     // DEV_MODE can be turned on to easily test the
@@ -84,12 +88,17 @@ public class FourInARow extends AbstractGame {
     public static void main(String args[]) throws Exception {
         FourInARow game = new FourInARow();
 
-        // DEV_MODE settings
-        game.TEST_BOT = "java -cp /home/jim/workspace/fourinarow-starterbot-java/bin/ bot.BotStarter";
-        game.NUM_TEST_BOTS = 2;
-        game.DEV_MODE = true;
+//        // DEV_MODE settings
+//        game.TEST_BOT = "java -cp /home/jim/workspace/fourinarow-starterbot-java/bin/ bot.BotStarter";
+//        game.NUM_TEST_BOTS = 2;
+//        game.DEV_MODE = true;
+//
+//        game.setupEngine(args);
+        BotPlayer player1 = new BotPlayer(1, new MyBotCli(), TIMEBANK_MAX, TIME_PER_MOVE);
+        BotPlayer player2 = new BotPlayer(2, new MyBotCli(), TIMEBANK_MAX, TIME_PER_MOVE);
 
-        game.setupEngine(args);
+        game.setupGame(Arrays.asList(player1, player2));
+        game.setupEngine(game.players);
         game.runEngine();
     }
 }
