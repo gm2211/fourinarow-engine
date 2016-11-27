@@ -18,7 +18,7 @@
 
 package com.theaigames.fourinarow;
 
-import com.theaigames.bot.MyBotCli;
+import com.theaigames.mybot.MyBotCli;
 import com.theaigames.fourinarow.field.Field;
 import com.theaigames.game.AbstractGame;
 import com.theaigames.game.player.BotPlayer;
